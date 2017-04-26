@@ -1,31 +1,70 @@
-const loaderUtils = require('loader-utils')
-const posthtml = require('posthtml')
-const postcss = require('posthtml-postcss')
 const path = require('path')
+const loaderUtils = require('loader-utils')
 
-const postcssPlugins = [
-	require('autoprefixer')({ browsers: ['last 2 versions'] }),
-	require('postcss-nested')
-]
-const postcssOptions = {}
+const posthtml = require('posthtml')
 
-const filterType = /^text\/css$/
+const sass = require('node-sass')
+const postcss = require('postcss')
+
 
 module.exports = function(source) {
-	// const options = loaderUtils.getLoaderConfig(this);
-	// console.log(options);
-	//
-
 	let callback = this.async();
+	const options = loaderUtils.getLoaderConfig(this);
 
-	posthtml(
-		[postcss(postcssPlugins, postcssOptions, filterType)]
-	)
-		.process(source)
-		.then(result => {
-			// console.log(result);
+	// console.log(source);
+	// console.log('=============================');
+	// console.log(options.src);
+	// console.log(this.context);
+	// console.log(this.resourcePath);
+	// console.log('=============================');
 
-			result.tree.match({ tag: 'style' }, node => {
+	if(options.src !== this.context) {
+
+		// TODO: add variable, that will be contains 'src' path
+		let block = this.resourcePath.replace(path.resolve(options.src, 'src'), '');
+		block = block.replace(/\\/g, '/');
+
+		source = `\n<!--#BEGIN#-->\n<!-- ${block} -->\n${source}\n<!--#END#-->\n`;
+	}
+
+
+	let error = error => {
+		callback(error);
+	}
+
+	let success = result => {
+		// console.log(result.tree);
+		callback(null, result.html);
+	}
+
+	let plugin = () => {
+		return function MY_PLUGIN(tree) {
+			// console.log(this);
+			// console.log(tree);
+
+			tree.match({ tag: 'style' }, node => {
+				// console.log(node.content.length);
+
+				let text;
+
+				if(node.attrs.scope) {
+					text = `.${node.attrs.scope} {${node.content[0]}}`
+				}
+				else {
+					text = node.content[0];
+				}
+
+				let scss = sass.renderSync({
+					data: text,
+					outputStyle: 'expanded',
+					sourceComments: false
+				})
+
+				// console.log(scss.css.toString());
+
+				let css = postcss([require('autoprefixer')]).process(scss.css.toString()).css
+
+				node.content[0] = css;
 
 				node.attrs = {
 					type: 'text/css'
@@ -34,14 +73,22 @@ module.exports = function(source) {
 				return node;
 			})
 
-			let html = result.html;
+			tree.match({ tag: 'script' }, node => {
 
-			if(this.resourcePath.search('block') != -1) {
-				let blockName = path.basename(this.resourcePath, path.extname(this.resourcePath));
+				if(typeof node.attrs.stack === 'string') {
+					node.content[0] = `\nEXE(function($) {\n${node.content[0]}\n})\n`;
+				}
 
-				html = `<!-- BEGIN of "${blockName}"-->\n<!-- file: "src/includes/blocks/${blockName}.html" -->\n${html}\n<!-- END of ${blockName} -->\n`
-			}
+				node.attrs = {
+					'type': 'text/javascript'
+				};
 
-			callback(null, html);
-		})
+				return node;
+			})
+
+			return tree;
+		}
+	}
+
+	posthtml([plugin()]).process(source).then(success, error)
 };
