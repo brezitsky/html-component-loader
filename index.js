@@ -9,7 +9,8 @@ const postcss = require('postcss')
 
 module.exports = function(source) {
 	let callback = this.async();
-	const options = loaderUtils.getLoaderConfig(this);
+	// const options = loaderUtils.getLoaderConfig(this);
+	const options = loaderUtils.getOptions(this);
 
 	// console.log(source);
 	// console.log('=============================');
