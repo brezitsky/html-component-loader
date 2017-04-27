@@ -4,7 +4,7 @@ HTML Webpack Plugin
 [![NPM](https://nodei.co/npm/html-component-loader.png?downloads=true&downloadRank=true&stars=true)](https://nodei.co/npm/html-component-loader/)
 
 This is a [webpack](http://webpack.github.io/) loader for html files, that are
-looks like 'components': contain `html`, inline `js` and `scss`.
+looks like 'components': contain `html`, inline `js` and `scss`. 
 
 Maintainer: vtlk [@vtlk7](http://telegram.me/vtlk7)
 
