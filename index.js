@@ -77,7 +77,12 @@ module.exports = function(source) {
 			tree.match({ tag: 'script' }, node => {
 
 				if(typeof node.attrs.stack === 'string') {
-					node.content[0] = `\nEXE(function($) {\n${node.content[0]}\n})\n`;
+					let content = '';
+					node.content.forEach(block => {
+						content += block;
+					});
+					node.content = [];
+					node.content[0] = `\nEXE(function($) {\n${content}\n})\n`;
 				}
 
 				node.attrs = {
