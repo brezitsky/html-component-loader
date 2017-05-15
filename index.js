@@ -79,7 +79,8 @@ module.exports = function(source) {
 			tree.match({ tag: 'script' }, node => {
 
 				let options = {
-					ast: false
+					ast: false,
+					presets: ['es2015']
 				};
 
 				if(typeof node.attrs.stack === 'string') {
