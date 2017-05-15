@@ -6,6 +6,8 @@ const posthtml = require('posthtml')
 const sass = require('node-sass')
 const postcss = require('postcss')
 
+const babel = require('babel-core')
+
 
 module.exports = function(source) {
 	let callback = this.async();
@@ -76,13 +78,17 @@ module.exports = function(source) {
 
 			tree.match({ tag: 'script' }, node => {
 
+				let options = {
+					ast: false
+				};
+
 				if(typeof node.attrs.stack === 'string') {
 					let content = '';
 					node.content.forEach(block => {
 						content += block;
 					});
 					node.content = [];
-					node.content[0] = `\nEXE(function($) {\n${content}\n})\n`;
+					node.content[0] = `\nEXE(function($) {\n${babel.transform(content, options).code}\n})\n`;
 				}
 
 				node.attrs = {
