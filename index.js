@@ -1,11 +1,9 @@
 const path = require('path')
 const loaderUtils = require('loader-utils')
-
+const fs = require('fs-extra')
 const posthtml = require('posthtml')
-
 const sass = require('node-sass')
 const postcss = require('postcss')
-
 const babel = require('babel-core')
 
 
@@ -16,18 +14,19 @@ module.exports = function(source) {
 
 	// console.log(source);
 	// console.log('=============================');
-	// console.log(options.src);
-	// console.log(this.context);
-	// console.log(this.resourcePath);
+	// console.log('options.src: ', options.src);
+	// console.log('this.context: ', this.context);
+	// console.log('this.resourcePath: ', this.resourcePath);
 	// console.log('=============================');
 
-	if(options.src !== this.context) {
+	if(this.context !== options.src) {
 
 		// TODO: add variable, that will be contains 'src' path
 		let block = this.resourcePath.replace(path.resolve(options.src, 'src'), '');
 		block = block.replace(/\\/g, '/');
 
-		source = `\n<!--#BEGIN#-->\n<!-- ${block} -->\n${source}\n<!--#END#-->\n`;
+		let time = new Date().getTime();
+		source = `\n<!--#BEGIN-${time}#-->\n<!-- ${block} -->\n<!-- #TIME=${time}# -->\n${source}\n<!--#END-${time}#-->\n`;
 	}
 
 
@@ -46,7 +45,7 @@ module.exports = function(source) {
 			// console.log(tree);
 
 			tree.match({ tag: 'style' }, node => {
-				// console.log(node.content.length);
+				// console.log(node);
 
 				let text;
 
@@ -57,9 +56,21 @@ module.exports = function(source) {
 					text = node.content[0];
 				}
 
+				/*
+				створи тимчасовий файл і підключим його в штмл файл, щоб можна було
+				обробити його лоадером
+				*/
+				// let p = path.resolve(options.src, `.tmp/_${new Date().getTime()}.scss`);
+
+				// fs.outputFileSync(p, text);
+
+				// node.content[0] = `\${require('${p}')}`;
+
+				// console.log(path.resolve(options.src, `.tmp/_${new Date().getTime()}.scss`));
+
 				let scss = sass.renderSync({
 					data: text,
-					outputStyle: 'expanded',
+					outputStyle: 'compressed',
 					sourceComments: false
 				})
 
@@ -67,7 +78,7 @@ module.exports = function(source) {
 
 				let css = postcss([require('autoprefixer')]).process(scss.css.toString()).css
 
-				node.content[0] = css;
+				node.content[0] = `\n${css}`;
 
 				node.attrs = {
 					type: 'text/css'
