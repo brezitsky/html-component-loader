@@ -6,18 +6,14 @@ const sass = require('node-sass')
 const postcss = require('postcss')
 const babel = require('babel-core')
 
+let scopesSCSS = [];
+let scopesJS = [];
 
 module.exports = function(source) {
 	let callback = this.async();
-	// const options = loaderUtils.getLoaderConfig(this);
+
 	const options = loaderUtils.getOptions(this);
 
-	// console.log(source);
-	// console.log('=============================');
-	// console.log('options.src: ', options.src);
-	// console.log('this.context: ', this.context);
-	// console.log('this.resourcePath: ', this.resourcePath);
-	// console.log('=============================');
 
 	if(this.context !== options.src) {
 
@@ -29,59 +25,44 @@ module.exports = function(source) {
 		source = `\n<!--#BEGIN-${time}#-->\n<!-- ${block} -->\n<!-- #TIME=${time}# -->\n${source}\n<!--#END-${time}#-->\n`;
 	}
 
-
 	let error = error => {
 		callback(error);
 	}
 
 	let success = result => {
-		// console.log(result.tree);
 		callback(null, result.html);
 	}
 
 	let plugin = () => {
 		return function MY_PLUGIN(tree) {
-			// console.log(this);
-			// console.log(tree);
 
 			tree.match({ tag: 'style' }, node => {
-				// console.log(node);
 
-				let text;
+				if(node.attrs.hasOwnProperty('scope')) {
+					let flag = true;
 
-				if(node.attrs.scope) {
-					text = `.${node.attrs.scope} {${node.content[0]}}`
-				}
-				else {
-					text = node.content[0];
-				}
+					for(let i = 0; i < scopesSCSS.length; i++) {
+						if(node.attrs.scope == scopesSCSS[i]) {
+							flag = false;
+							break;
+						}
+					}
 
-				/*
-				створи тимчасовий файл і підключим його в штмл файл, щоб можна було
-				обробити його лоадером
-				*/
-				// let p = path.resolve(options.src, `.tmp/_${new Date().getTime()}.scss`);
+					if(flag) {
+						scopesSCSS.push(node.attrs.scope);
 
-				// fs.outputFileSync(p, text);
+						let scss = sass.renderSync({
+							data: node.content[0],
+							outputStyle: 'compressed',
+							sourceComments: false
+						})
 
-				// node.content[0] = `\${require('${p}')}`;
+						let css = postcss([require('autoprefixer')]).process(scss.css.toString()).css
 
-				// console.log(path.resolve(options.src, `.tmp/_${new Date().getTime()}.scss`));
+						fs.writeFileSync(path.resolve(options.src, '.tmp/inline.css'), `/* SCOPE = ${node.attrs.scope} */\n${css}\n`, {flag: 'a+'});
 
-				let scss = sass.renderSync({
-					data: text,
-					outputStyle: 'compressed',
-					sourceComments: false
-				})
-
-				// console.log(scss.css.toString());
-
-				let css = postcss([require('autoprefixer')]).process(scss.css.toString()).css
-
-				node.content[0] = `\n${css}`;
-
-				node.attrs = {
-					type: 'text/css'
+						node = '';
+					}
 				}
 
 				return node;
@@ -89,23 +70,44 @@ module.exports = function(source) {
 
 			tree.match({ tag: 'script' }, node => {
 
-				let options = {
-					ast: false,
-					presets: ['es2015']
-				};
+				if(node.attrs.hasOwnProperty('scope')) {
+					let flag = true;
 
-				if(typeof node.attrs.stack === 'string') {
-					let content = '';
-					node.content.forEach(block => {
-						content += block;
-					});
-					node.content = [];
-					node.content[0] = `\nEXE(function($) {\n${babel.transform(content, options).code}\n})\n`;
+					for(let i = 0; i < scopesJS.length; i++) {
+						if(node.attrs.scope == scopesJS[i]) {
+							flag = false;
+							break;
+						}
+					}
+
+					if(flag) {
+
+						scopesJS.push(node.attrs.scope);
+
+						let opts = {
+							ast: false,
+							presets: ['es2015'],
+							comments: false,
+							minified: true
+						};
+
+						let content = '';
+
+						node.content.map(block => {
+							content += block;
+						});
+
+						fs.writeFileSync(
+							path.resolve(options.src, '.tmp/inline.js'),
+							`/* SCOPE = ${node.attrs.scope} */\nEXE(function($) {if(document.querySelectorAll('${node.attrs.scope}').length) {${babel.transform(content, opts).code}}})\n`,
+							{flag: 'a+'});
+
+						node = '';
+					}
 				}
 
-				node.attrs = {
-					'type': 'text/javascript'
-				};
+
+
 
 				return node;
 			})
