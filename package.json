@@ -1,6 +1,6 @@
 {
   "name": "html-component-loader",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Loader for html-based components, contains inline scss and js",
   "main": "index.js",
   "scripts": {
