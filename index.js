@@ -51,18 +51,23 @@ module.exports = function(source) {
 					if(flag) {
 						scopesSCSS.push(node.attrs.scope);
 
-						let scss = sass.renderSync({
-							data: node.content[0],
-							outputStyle: 'compressed',
-							sourceComments: false
-						})
+						try {
+							let scss = sass.renderSync({
+								data: node.content[0],
+								outputStyle: 'compressed',
+								sourceComments: false
+							})
 
-						let css = postcss([require('autoprefixer')]).process(scss.css.toString()).css
+							let css = postcss([require('autoprefixer')]).process(scss.css.toString()).css
 
-						fs.writeFileSync(path.resolve(options.src, '.tmp/inline.css'), `/* SCOPE = ${node.attrs.scope} */\n${css}\n`, {flag: 'a+'});
-
-						node = '';
+							fs.writeFileSync(path.resolve(options.src, '.tmp/inline.css'), `/* SCOPE = ${node.attrs.scope} */\n${css}\n`, {flag: 'a+'});
+						}
+						catch(e) {
+							console.log(e);
+						}
 					}
+
+					node = '';
 				}
 
 				return node;
@@ -82,32 +87,35 @@ module.exports = function(source) {
 
 					if(flag) {
 
-						scopesJS.push(node.attrs.scope);
+						try {
+							scopesJS.push(node.attrs.scope);
 
-						let opts = {
-							ast: false,
-							presets: ['es2015'],
-							comments: false,
-							minified: true
-						};
+							let opts = {
+								ast: false,
+								presets: ['es2015'],
+								comments: false,
+								minified: true
+							};
 
-						let content = '';
+							let content = '';
 
-						node.content.map(block => {
-							content += block;
-						});
+							node.content.map(block => {
+								content += block;
+							});
 
-						fs.writeFileSync(
-							path.resolve(options.src, '.tmp/inline.js'),
-							`/* SCOPE = ${node.attrs.scope} */\nEXE(function($) {if(document.querySelectorAll('${node.attrs.scope}').length) {${babel.transform(content, opts).code}}})\n`,
-							{flag: 'a+'});
+							fs.writeFileSync(
+								path.resolve(options.src, '.tmp/inline.js'),
+								`/* SCOPE = ${node.attrs.scope} */\nEXE(function($) {if(document.querySelectorAll('${node.attrs.scope}').length) {${babel.transform(content, opts).code}}})\n`,
+								{flag: 'a+'});
+						}
+						catch(e) {
+							console.log(e);
+						}
 
-						node = '';
 					}
+
+					node = '';
 				}
-
-
-
 
 				return node;
 			})
