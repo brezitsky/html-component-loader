@@ -165,35 +165,35 @@ module.exports = function(source) {
 							}
 
 						}
+
+						node = '';
 					}
 
+					/*
+					Не продакшн-мод (скоріш за все, девелопмент).
+					Запускаєм стару версію лоадера.
+					Вона впихає інлайново, працює шидко.
+					*/
+					else {
+						let options = {
+							ast: false,
+							presets: ['es2015']
+						};
 
-					node = '';
-				}
-
-				/*
-				Не продакшн-мод (скоріш за все, девелопмент).
-				Запускаєм стару версію лоадера.
-				Вона впихає інлайново, працює шидко.
-				*/
-				else {
-					let options = {
-						ast: false,
-						presets: ['es2015']
-					};
-
-					if(node.attrs.hasOwnProperty('scope')) {
 						let content = '';
+
 						node.content.forEach(block => {
 							content += block;
 						});
-						node.content = [];
-						node.content[0] = `\nEXE(function($) {\n${babel.transform(content, options).code}\n})\n`;
-					}
 
-					node.attrs = {
-						'type': 'text/javascript'
-					};
+						node.content = [];
+
+						node.content[0] = `\nEXE(function($) {\n${babel.transform(content, options).code}\n})\n`;
+
+						node.attrs = {
+							'type': 'text/javascript'
+						};
+					}
 				}
 
 				return node;
